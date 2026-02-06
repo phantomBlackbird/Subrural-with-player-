@@ -2,26 +2,50 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Subrural Game - Final Mini Scale</title>
+    <title>Subrural Game - D-Pad & Human Scale</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.1/nipplejs.min.js"></script>
     
     <style>
-      #joystick-container {
+      #dpad {
         position: absolute;
-        bottom: 50px;
-        left: 50px;
-        width: 150px;
-        height: 150px;
-        z-index: 20;
+        bottom: 40px;
+        left: 40px;
+        width: 160px;
+        height: 160px;
+        z-index: 100;
+        display: grid;
+        grid-template-areas: ". up ." "left . right" ". down .";
+        gap: 10px;
+      }
+      .btn {
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.5);
+        border: 2px solid #fff;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        user-select: none;
         touch-action: none;
       }
+      .btn:active { background: rgba(255, 255, 255, 0.8); }
+      #up { grid-area: up; }
+      #left { grid-area: left; }
+      #right { grid-area: right; }
+      #down { grid-area: down; }
     </style>
   </head>
   <body>
 
-    <div id="joystick-container"></div>
+    <div id="dpad">
+      <div class="btn" id="up">▲</div>
+      <div class="btn" id="left">◀</div>
+      <div class="btn" id="right">▶</div>
+      <div class="btn" id="down">▼</div>
+    </div>
 
     <a-scene>
       <a-assets>
@@ -37,19 +61,19 @@
         
         <a-entity id="player-model-entity" 
                   gltf-model="#player-model" 
-                  scale="0.026 0.026 0.026"
+                  scale="0.008 0.008 0.008"
                   animation-mixer="clip: idle"
                   rotation="0 180 0">
         </a-entity>
 
         <a-entity id="camera-parent">
-           <a-entity id="main-camera" camera position="0 0.2 0.4" look-controls="pointerLockEnabled: true">
+           <a-entity id="main-camera" camera position="0 0.1 0.25" look-controls="pointerLockEnabled: false">
            </a-entity>
         </a-entity>
         
       </a-entity>
 
-      <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+      <a-entity light="type: ambient; intensity: 0.7"></a-entity>
       <a-entity light="type: directional; intensity: 0.8" position="1 4 3"></a-entity>
     </a-scene>
 
@@ -57,47 +81,50 @@
       const rig = document.querySelector('#player-rig');
       const model = document.querySelector('#player-model-entity');
       
-      let moveForward = false;
-      let isRunning = false;
+      let keys = { up: false, down: false, left: false, right: false };
+      const moveSpeed = 0.003; 
+      const rotationSpeed = 2;
 
-      const manager = nipplejs.create({
-        zone: document.getElementById('joystick-container'),
-        mode: 'static',
-        position: {left: '75px', bottom: '75px'},
-        color: 'white'
-      });
+      // D-Pad Logic
+      const setupButton = (id, key) => {
+        const el = document.getElementById(id);
+        el.addEventListener('touchstart', () => { keys[key] = true; });
+        el.addEventListener('touchend', () => { keys[key] = false; });
+        // Mouse support for testing
+        el.addEventListener('mousedown', () => { keys[key] = true; });
+        el.addEventListener('mouseup', () => { keys[key] = false; });
+      };
 
-      manager.on('move', (evt, data) => {
-        moveForward = true;
-        isRunning = data.distance > 30; 
-        const angle = data.angle.degree;
-        rig.setAttribute('rotation', `0 ${angle - 90} 0`);
-      });
-
-      manager.on('end', () => {
-        moveForward = false;
-        isRunning = false;
-        model.setAttribute('animation-mixer', 'clip: idle');
-      });
+      setupButton('up', 'up');
+      setupButton('down', 'down');
+      setupButton('left', 'left');
+      setupButton('right', 'right');
 
       function tick() {
-        if (moveForward) {
-          // Speeds reduced to prevent zooming past the small houses
-          const speed = isRunning ? 0.01 : 0.004;
-          const currentAnim = isRunning ? 'run-forward' : 'walk-forward';
-          
-          const rotation = rig.getAttribute('rotation').y;
-          const angleRad = rotation * (Math.PI / 180);
-          
-          const pos = rig.getAttribute('position');
-          pos.x -= Math.sin(angleRad) * speed;
-          pos.z -= Math.cos(angleRad) * speed;
-          rig.setAttribute('position', pos);
+        let isMoving = false;
+        let currentRotation = rig.getAttribute('rotation');
 
-          if (model.getAttribute('animation-mixer').clip !== currentAnim) {
-             model.setAttribute('animation-mixer', `clip: ${currentAnim}`);
-          }
+        if (keys.left) currentRotation.y += rotationSpeed;
+        if (keys.right) currentRotation.y -= rotationSpeed;
+        rig.setAttribute('rotation', currentRotation);
+
+        if (keys.up || keys.down) {
+          isMoving = true;
+          const direction = keys.up ? 1 : -1;
+          const angleRad = currentRotation.y * (Math.PI / 180);
+          const pos = rig.getAttribute('position');
+          
+          pos.x -= Math.sin(angleRad) * moveSpeed * direction;
+          pos.z -= Math.cos(angleRad) * moveSpeed * direction;
+          rig.setAttribute('position', pos);
         }
+
+        // Animation Toggle
+        const targetAnim = isMoving ? 'walk-forward' : 'idle';
+        if (model.getAttribute('animation-mixer').clip !== targetAnim) {
+          model.setAttribute('animation-mixer', `clip: ${targetAnim}`);
+        }
+
         requestAnimationFrame(tick);
       }
       tick();
