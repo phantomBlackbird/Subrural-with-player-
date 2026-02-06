@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Subrural Game - Final Human Scale</title>
+    <title>Subrural Game - Final Mini Scale</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.1/nipplejs.min.js"></script>
@@ -37,13 +37,13 @@
         
         <a-entity id="player-model-entity" 
                   gltf-model="#player-model" 
-                  scale="0.08 0.08 0.08"
+                  scale="0.026 0.026 0.026"
                   animation-mixer="clip: idle"
                   rotation="0 180 0">
         </a-entity>
 
         <a-entity id="camera-parent">
-           <a-entity id="main-camera" camera position="0 0.5 0.8" look-controls="pointerLockEnabled: true">
+           <a-entity id="main-camera" camera position="0 0.2 0.4" look-controls="pointerLockEnabled: true">
            </a-entity>
         </a-entity>
         
@@ -82,8 +82,8 @@
 
       function tick() {
         if (moveForward) {
-          // Speed adjusted again so he doesn't zip across the map too fast
-          const speed = isRunning ? 0.025 : 0.01;
+          // Speeds reduced to prevent zooming past the small houses
+          const speed = isRunning ? 0.01 : 0.004;
           const currentAnim = isRunning ? 'run-forward' : 'walk-forward';
           
           const rotation = rig.getAttribute('rotation').y;
