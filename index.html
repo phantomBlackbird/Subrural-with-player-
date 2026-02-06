@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Subrural Game - Third Person</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.1/nipplejs.min.js"></script>
+    
+    <style>
+      #joystick-container {
+        position: absolute;
+        bottom: 50px;
+        left: 50px;
+        width: 150px;
+        height: 150px;
+        z-index: 20;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div id="joystick-container"></div>
+
+    <a-scene>
+      <a-assets>
+        <a-asset-item id="subrural-model" src="Subrural.glb"></a-asset-item>
+        <a-asset-item id="player-model" src="Player.glb"></a-asset-item>
+      </a-assets>
+
+      <a-entity gltf-model="#subrural-model" position="0 0 0"></a-entity>
+      <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200" color="#8B4513"></a-plane>
+      <a-sky color="#87CEEB"></a-sky>
+
+      <a-entity id="player-rig" position="0 0 0">
+        
+        <a-entity id="player-model-entity" 
+                  gltf-model="#player-model" 
+                  animation-mixer="clip: idle"
+                  rotation="0 180 0">
+        </a-entity>
+
+        <a-entity id="camera-parent" rotation="0 0 0">
+           <a-entity id="main-camera" camera position="0 3 4" look-controls="pointerLockEnabled: true">
+           </a-entity>
+        </a-entity>
+        
+      </a-entity>
+
+      <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+      <a-entity light="type: directional; intensity: 0.8" position="1 4 3"></a-entity>
+    </a-scene>
+
+    <script>
+      const rig = document.querySelector('#player-rig');
+      const model = document.querySelector('#player-model-entity');
+      const cameraParent = document.querySelector('#camera-parent');
+      
+      let moveForward = false;
+      let isRunning = false;
+
+      // Initialize Joystick
+      const manager = nipplejs.create({
+        zone: document.getElementById('joystick-container'),
+        mode: 'static',
+        position: {left: '75px', bottom: '75px'},
+        color: 'white'
+      });
+
+      manager.on('move', (evt, data) => {
+        moveForward = true;
+        // If joystick is pushed more than 70% of the way, switch to run
+        isRunning = data.distance > 35; 
+        
+        // Rotate the player rig based on joystick angle
+        const angle = data.angle.degree;
+        rig.setAttribute('rotation', `0 ${angle - 90} 0`);
+      });
+
+      manager.on('end', () => {
+        moveForward = false;
+        isRunning = false;
+        model.setAttribute('animation-mixer', 'clip: idle');
+      });
+
+      // Frame update loop
+      function tick() {
+        if (moveForward) {
+          const speed = isRunning ? 0.15 : 0.05;
+          const currentAnim = isRunning ? 'run-forward' : 'walk-forward';
+          
+          // Move the rig forward in the direction it's facing
+          const rotation = rig.getAttribute('rotation').y;
+          const angleRad = rotation * (Math.PI / 180);
+          
+          const pos = rig.getAttribute('position');
+          pos.x -= Math.sin(angleRad) * speed;
+          pos.z -= Math.cos(angleRad) * speed;
+          rig.setAttribute('position', pos);
+
+          // Update animation if it changed
+          if (model.getAttribute('animation-mixer').clip !== currentAnim) {
+             model.setAttribute('animation-mixer', `clip: ${currentAnim}`);
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+      tick();
+    </script>
+  </body>
+</html>
